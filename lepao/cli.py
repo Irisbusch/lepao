@@ -6,7 +6,7 @@ import argparse
 import logging
 
 from lepao.flow import AutomationError, Session
-from lepao.win32 import WindowNotFound
+from lepao.win32 import WindowNotFound, minimize_own_console
 
 log = logging.getLogger("lepao")
 
@@ -46,6 +46,8 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> int:
+    # 开机脚本拉起的是 python.exe，它会自带一个控制台。先收起来，免得挡住 MuMu。
+    minimize_own_console()
     logging.basicConfig(level=logging.INFO, format="%(message)s")
     args = build_parser().parse_args(argv)
     mode_error = _check_mode(args)

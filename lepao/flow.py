@@ -141,25 +141,7 @@ class Session:
         )
 
     def _click_bottom_module_tab(self, width: int, height: int) -> None:
-        """只点底栏「模块」。首页卡片在屏幕中部，不点。"""
-        floor = int(height * BOTTOM_TAB_FLOOR_RATIO)
-        target_x = int(width * BOTTOM_TAB_X_RATIO)
-        nodes = self.screen.module_nodes()
-        log.info("画面上的「模块」节点:")
-        for node in nodes:
-            log.info("  %r (%d,%d)", node["text"], node["cx"], node["cy"])
-        bottom = [node for node in nodes if node["cy"] >= floor and node["text"] in ("模块", "Module")]
-        if bottom:
-            bottom.sort(key=lambda node: (abs(node["cx"] - target_x), -node["cy"]))
-            hit = bottom[0]
-            x = hit["cx"]
-            y = max(int(height * MODULE_ICON_Y_RATIO), hit["cy"] - MODULE_ICON_ABOVE_LABEL)
-            log.info("底栏文字 (%d,%d)，点图标 (%d,%d)", hit["cx"], hit["cy"], x, y)
-        else:
-            x = target_x
-            y = int(height * BOTTOM_TAB_Y_RATIO)
-            log.info("没读到底栏文字，按比例点 (%d,%d)", x, y)
-        self.pointer.tap_android(x, y, width, height)
+        self._tap(width, height, Points.MODULES, "点击右下角三角形", 2.0)
 
     def _scroll_to_bottom(self, width: int, height: int) -> None:
         log.info("下滑到列表最底部...")

@@ -21,6 +21,10 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+# 窗口把这条管道当 UTF-8 读。不设的话，中文会按系统 ANSI 码页出去，日志里就是乱码。
+$utf8 = [System.Text.UTF8Encoding]::new($false)
+$OutputEncoding = $utf8
+try { [Console]::OutputEncoding = $utf8 } catch {}
 
 $RepoRoot = Split-Path -Parent $PSCommandPath
 $ConfigPath = Join-Path $RepoRoot "config.json"
@@ -175,6 +179,10 @@ if ($env:PYTHONPATH) {
 }
 $env:PYTHONUTF8 = "1"
 $env:PYTHONIOENCODING = "utf-8"
+$env:PYTHONUNBUFFERED = "1"
+# 用配置里的 python.exe，不要换成 pythonw。pythonw 没有控制台，前台还是「自动跑」时
+# 系统会丢掉 SetCursorPos，光标进不了 MuMu，停止也等不到它退出。
+# 这个控制台由 lepao 自己最小化，不挡模拟器。
 
 Push-Location $RepoRoot
 try {

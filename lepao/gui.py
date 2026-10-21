@@ -1,6 +1,7 @@
-"""乐跑的窗口。开着时，到点跑整套开机流程，并跟着日志走阶段和公里数。
+"""乐跑的窗口。开着时，到点新开一个终端，跑跟手敲一样的两条命令。
 
-流程把阶段名、公里、重开写进标准输出。这里只认 lepao.stages 里的那些句子。
+先 conda activate daily，再 pwsh -File 开机脚本。终端要加载配置文件，conda 才在。
+不要挂起，不要藏窗口，不要把输出接走，否则点击进程算后台程序，光标不会动。
 窗口不要置顶，置顶会挡住 MuMu，鼠标点不到模拟器。
 """
 
@@ -15,6 +16,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 from lepao.config import DISTANCE_TARGET_KM, REPO_ROOT, SCHEDULE_TIMES
+from lepao.win32 import ProcessJob
 from lepao.stages import (
     MANAGER_SEEN_LOG,
     STAGES,
@@ -28,6 +30,26 @@ from lepao.stages import (
 SCRIPT = REPO_ROOT / "start-mumu-lepao.ps1"
 LAUNCHER = REPO_ROOT / "lepao-gui.exe"
 APP_TITLE = "自动跑"
+
+
+def console_boot_args() -> tuple[list[str], int]:
+    """现在运行和到点运行都走这条。跟手敲的两条命令一样。
+
+    新开一个普通 pwsh，加载配置文件，然后：
+    conda activate daily
+    pwsh -File start-mumu-lepao.ps1
+    不要 -NoProfile，否则没有 conda。不要挂起，不要接管道，不要 CREATE_NO_WINDOW。
+    这个终端由 lepao 自己最小化。
+    """
+    script = str(SCRIPT)
+    command = (
+        "conda activate daily; "
+        "if (-not $?) { exit 1 }; "
+        f"pwsh -File '{script}'; "
+        "exit $LASTEXITCODE"
+    )
+    return ["pwsh", "-Command", command], subprocess.CREATE_NEW_CONSOLE
+
 
 BG = "#101114"
 CARD = "#181b22"
@@ -222,6 +244,7 @@ class App:
         self.view = RunView()
         self.started_at: datetime | None = None
         self.proc: subprocess.Popen[str] | None = None
+        self.job: ProcessJob | None = None
         self.fired: set[tuple[str, int, int]] = set()
         self.lines: queue.Queue[tuple[str, int | None, int]] = queue.Queue()
         self.generation = 0
@@ -377,7 +400,7 @@ class App:
         ).pack(anchor="w", pady=(2, 0))
         tk.Label(
             box,
-            text="最小化后时钟继续走，到点仍会自动跑。退出才会关掉。运行时会移动鼠标，并把 MuMu「乐跑」窗口摆到前台。",
+            text="开始运行后会收进任务栏，避免挡住模拟器。时钟继续走，到点仍会自动跑。退出才会关掉。",
             bg=BG,
             fg=DIM,
             font=(UI, 9),
@@ -454,6 +477,10 @@ class App:
             h, rem = divmod(elapsed, 3600)
             m, s = divmod(rem, 60)
             self.elapsed_label.configure(text=f"已运行 {h:02d}:{m:02d}:{s:02d}")
+        if self._busy():
+            from lepao.win32 import allow_other_process_foreground
+
+            allow_other_process_foreground()
         if auto_on:
             key = due_key(now)
             if key is not None and key not in self.fired:
@@ -471,7 +498,9 @@ class App:
         self._start(f"{label} 到点，开始运行")
 
     def _busy(self) -> bool:
-        return self.proc is not None and self.proc.poll() is None
+        if self.proc is not None and self.proc.poll() is None:
+            return True
+        return self.job is not None and self.job.alive()
 
     def _start(self, reason: str) -> None:
         if self._busy():
@@ -489,25 +518,32 @@ class App:
         self._clear_log()
         self._paint()
         self._write(reason)
-        env = os.environ.copy()
-        env["PYTHONUTF8"] = "1"
-        env["PYTHONIOENCODING"] = "utf-8"
-        env["PYTHONPATH"] = str(REPO_ROOT)
+        from lepao.win32 import allow_other_process_foreground
+
+        allow_other_process_foreground()
+        argv, console_flag = console_boot_args()
         generation = self.generation
-        self.proc = subprocess.Popen(
-            ["pwsh", "-NoProfile", "-File", str(SCRIPT)],
-            cwd=str(REPO_ROOT),
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            text=True,
-            encoding="utf-8",
-            errors="replace",
-            env=env,
-            creationflags=subprocess.CREATE_NO_WINDOW,
-        )
+        try:
+            # 普通新终端。不挂起，不放进进程组，不接 stdout/stderr。
+            self.job = None
+            self.proc = subprocess.Popen(argv, cwd=str(REPO_ROOT), creationflags=console_flag)
+        except OSError as exc:
+            self.proc = None
+            self.job = None
+            self.view.finish(1)
+            self._set_busy_look(False)
+            self._write(f"没能启动：{exc}")
+            self._paint()
+            return
         threading.Thread(target=self._pump, args=(self.proc, generation), daemon=True).start()
+        # 按钮回调里还握着前台。先放行，再收起，点击进程才能把光标送进 MuMu。
+        self._park()
+        self.root.after(200, self._park)
+        self._write("已打开终端：conda activate daily，然后运行开机脚本")
+        self._write("已收进任务栏，避免挡住模拟器")
 
     def _pump(self, proc: subprocess.Popen[str], generation: int) -> None:
+        # 日志在控制台里，这里通常没有管道。没有管道时也要等到退出，窗口才能收尾。
         if proc.stdout is not None:
             for line in proc.stdout:
                 self.lines.put((line.rstrip("\r\n"), None, generation))
@@ -527,6 +563,7 @@ class App:
                     continue
                 self.view.finish(code, stopped=self.stopped)
                 self.stopped = False
+                self._close_job()
                 self._set_busy_look(False)
                 self._write(f"结束，退出码 {code}")
                 self._paint()
@@ -534,17 +571,29 @@ class App:
             pass
         self.root.after(100, self._drain)
 
+    def _close_job(self) -> None:
+        job = self.job
+        self.job = None
+        if job is not None:
+            job.close()
+
     def _stop(self) -> None:
         proc = self.proc
-        if proc is None or proc.poll() is not None:
+        job = self.job
+        proc_running = proc is not None and proc.poll() is None
+        job_running = job is not None and job.alive()
+        # 启动脚本先退出时，poll 已经有值，但点击进程还在进程组里。这时候也要杀。
+        if not proc_running and not job_running:
             return
         self.stopped = True
-        subprocess.run(
-            ["taskkill", "/F", "/T", "/PID", str(proc.pid)],
-            capture_output=True,
-            text=True,
-            creationflags=subprocess.CREATE_NO_WINDOW,
-        )
+        killed = job_running and job is not None and job.terminate()
+        if job_running and not killed:
+            self._write("进程组没能结束，改按进程树停止")
+        if proc_running and not killed and proc is not None:
+            detail = _taskkill_tree(proc.pid)
+            if detail:
+                self._write(detail)
+        self._close_job()
         self.view.finish(1, stopped=True)
         self._set_busy_look(False)
         self._write("已停止")
@@ -684,6 +733,15 @@ class App:
         except Exception:
             return
 
+    def _park(self) -> None:
+        """运行中把本窗口让开。前台还是它时，模块点击会落进来。"""
+        if not self.root.winfo_exists():
+            return
+        from lepao.win32 import allow_other_process_foreground
+
+        allow_other_process_foreground()
+        self._minimize()
+
     def _minimize(self) -> None:
         """收进任务栏。时钟和正在跑的流程都继续。"""
         self.root.iconify()
@@ -696,6 +754,16 @@ class App:
                 return
         self._stop()
         self.root.destroy()
+
+
+def _taskkill_tree(pid: int) -> str:
+    result = subprocess.run(
+        ["taskkill", "/F", "/T", "/PID", str(pid)],
+        capture_output=True,
+        creationflags=subprocess.CREATE_NO_WINDOW,
+    )
+    data = (result.stdout or b"") + (result.stderr or b"")
+    return data.decode("mbcs", errors="replace").strip()
 
 
 def _canvas_size(canvas: tk.Canvas, *, horizontal: bool) -> int:

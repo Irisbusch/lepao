@@ -1,10 +1,14 @@
+import subprocess
+import sys
 import tempfile
+import time
 import unittest
 from pathlib import Path
 import tkinter as tk
 
 from lepao.config import WINDOW_HINTS
-from lepao.gui import APP_TITLE, App, RunView, install_startup, schedule_label
+from lepao.gui import APP_TITLE, App, RunView, console_boot_args, install_startup, schedule_label
+from lepao.win32 import GUI_TITLE
 from lepao.stages import RETRY_LOG, STAGES
 
 
@@ -82,6 +86,19 @@ class RunViewTests(unittest.TestCase):
         self.assertEqual(view.status, "运行中")
 
 
+class ConsoleBootTests(unittest.TestCase):
+    def test_boot_opens_a_real_console_script(self) -> None:
+        argv, flags = console_boot_args()
+        self.assertEqual(argv[0], "pwsh")
+        self.assertNotIn("-NoProfile", argv)
+        command = argv[-1]
+        self.assertIn("conda activate daily", command)
+        self.assertIn("pwsh -File", command)
+        self.assertIn("start-mumu-lepao.ps1", command)
+        self.assertFalse(flags & subprocess.CREATE_NO_WINDOW)
+        self.assertTrue(flags & subprocess.CREATE_NEW_CONSOLE)
+
+
 class ScheduleLabelTests(unittest.TestCase):
     def test_label_comes_from_the_slots(self) -> None:
         self.assertEqual(schedule_label(((8, 0), (17, 0))), "每天 08:00 和 17:00 自动运行")
@@ -129,8 +146,57 @@ class DashboardTests(unittest.TestCase):
     def test_title_does_not_look_like_the_emulator(self) -> None:
         title = self.app.root.title()
         self.assertEqual(title, APP_TITLE)
+        self.assertEqual(title, GUI_TITLE)
         for hint in WINDOW_HINTS:
             self.assertNotIn(hint.lower(), title.lower())
+
+    def test_stop_kills_the_clicker_after_the_launcher_exits(self) -> None:
+        """启动脚本先退出时，停止仍要结束还在进程组里的点击进程。"""
+        from lepao.win32 import ProcessJob, popen_in_job
+
+        empty = ProcessJob()
+        self.assertFalse(empty.alive())
+        empty.close()
+
+        proc = None
+        job = None
+        try:
+            proc, job, assigned = popen_in_job(
+                [sys.executable, "-c", "import time; time.sleep(30)"],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                creationflags=subprocess.CREATE_NO_WINDOW,
+            )
+            self.assertTrue(assigned)
+            self.assertIsNone(proc.poll())
+            self.assertTrue(job.alive())
+
+            class Finished:
+                pid = 0
+
+                def poll(self) -> int:
+                    return 0
+
+            self.app.proc = Finished()  # type: ignore[assignment]
+            self.app.job = job
+            self.app.view.begin()
+            self.app._stop()
+            self.assertEqual(self.app.view.status, "已停止")
+            self.assertIn("已停止", self.app.log.get("1.0", "end"))
+            proc.wait(timeout=5)
+            self.assertIsNotNone(proc.poll())
+            deadline = time.time() + 2
+            while job.alive() and time.time() < deadline:
+                time.sleep(0.05)
+            self.assertFalse(job.alive())
+        finally:
+            if proc is not None and proc.poll() is None:
+                proc.kill()
+                proc.wait(timeout=5)
+            if job is not None:
+                job.close()
+            self.app.proc = None
+            self.app.job = None
 
 
 class StartupShortcutTests(unittest.TestCase):

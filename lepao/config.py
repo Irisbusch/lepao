@@ -49,6 +49,7 @@ MULT_DX, MULT_DY = 200, 400
 
 class Points:
     """Android 画面比例坐标，按当前这套界面标定。"""
+    MODULES = (0.70, 0.55)
 
     LSPOSED_RUN = (0.22, 0.52)
     SHELL_MODULES = (0.375, 0.94)
