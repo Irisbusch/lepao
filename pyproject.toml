@@ -1,0 +1,19 @@
+[project]
+name = "lepao"
+version = "1.0.0"
+description = "MuMu 乐跑实例开机，以及 KernelSU 界面自动化"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "uiautomator2==3.7.0",
+]
+
+[project.scripts]
+lepao = "lepao.cli:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["lepao*"]

@@ -1,0 +1,10 @@
+{
+  "player_name": "乐跑",
+  "timeout_sec": 180,
+  "adb_ready_timeout_sec": 60,
+  "mumu_manager": "S:\\MuMu Player 12\\nx_main\\MuMuManager.exe",
+  "adb": "S:\\MuMu Player 12\\nx_main\\adb.exe",
+  "vms_root": "S:\\MuMu Player 12\\vms",
+  "python": "E:\\Anaconda3\\envs\\daily\\python.exe",
+  "kernelsu_package": "me.weishu.kernelsu"
+}
