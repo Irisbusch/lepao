@@ -49,6 +49,12 @@ MULT_DX, MULT_DY = 200, 400
 
 class Points:
     """Android 画面比例坐标，按当前这套界面标定。"""
+    SETTING = (0.15, 0.93)
+    ACCESSIBILITY = (0.50, 0.93)
+    LEPAO_ACCESSIBILITY = (0.50, 0.55)
+    LEPAO_ACCESSIBILITY_1 = (0.70, 0.45)
+    ADMIT = (0.50, 0.80)
+
     MODULES = (0.70, 0.55)
 
     LSPOSED_RUN = (0.22, 0.52)

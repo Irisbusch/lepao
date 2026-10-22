@@ -17,8 +17,9 @@ class RunViewTests(unittest.TestCase):
         view = RunView()
         view.begin()
         view.apply_line("阶段 路线模拟")
-        self.assertEqual(view.states[4], "active")
-        self.assertEqual(view.states[:4], ["done"] * 4)
+        route = STAGES.index("路线模拟")
+        self.assertEqual(view.states[route], "active")
+        self.assertEqual(view.states[:route], ["done"] * route)
         self.assertEqual(view.headline(), "路线模拟")
 
     def test_kilometers_fill_the_bar_toward_the_target(self) -> None:
@@ -73,7 +74,7 @@ class RunViewTests(unittest.TestCase):
         stopped.apply_line("阶段 路线模拟")
         stopped.finish(1, stopped=True)
         self.assertEqual(stopped.status, "已停止")
-        self.assertEqual(stopped.states[4], "active")
+        self.assertEqual(stopped.states[STAGES.index("路线模拟")], "active")
 
     def test_a_new_run_clears_the_previous_one(self) -> None:
         view = RunView()

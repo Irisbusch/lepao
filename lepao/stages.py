@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 
 STAGES = (
+    "打开乐跑无障碍功能",
     "打开 LSPosed",
     "定位模拟",
     "打开乐跑",

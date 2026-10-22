@@ -6,7 +6,7 @@
 
 ## 布局
 
-- `start-mumu-lepao.ps1`：开机、等 Android、连接 ADB、拉起 KernelSU、调用 Python。
+- `start-mumu-lepao.ps1`：开机、等 Android、连接 ADB、调用 Python。KernelSU 由界面流程在无障碍之后启动。
 - `config.json`：这台机器的 MuMu 路径、Python 解释器、实例名。
 - `lepao/`：窗口定位（`win32.py`）、读界面（`screen.py`）、点击顺序（`flow.py`）、比例坐标（`config.py`）、关掉并重开 MuMu（`mumu.py`）。
 - `kernelsu_lsposed.py`：旧入口，参数不变，转到 `python -m lepao`。

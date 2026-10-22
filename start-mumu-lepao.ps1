@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    打开 MuMu「乐跑」，连接 ADB，拉起 KernelSU，再跑界面流程。
+    打开 MuMu「乐跑」，连接 ADB，再跑界面流程。界面流程里先打开无障碍，再启动 KernelSU。
 .DESCRIPTION
     机器相关路径在仓库根目录的 config.json。参数可以覆盖配置。
 .EXAMPLE
@@ -16,8 +16,7 @@ param(
     [string]$Manager,
     [string]$Adb,
     [string]$VmsRoot,
-    [string]$Python,
-    [string]$KernelSUPackage
+    [string]$Python
 )
 
 $ErrorActionPreference = "Stop"
@@ -40,7 +39,6 @@ if (-not $PSBoundParameters.ContainsKey("Manager")) { $Manager = [string]$Config
 if (-not $PSBoundParameters.ContainsKey("Adb")) { $Adb = [string]$Config.adb }
 if (-not $PSBoundParameters.ContainsKey("VmsRoot")) { $VmsRoot = [string]$Config.vms_root }
 if (-not $PSBoundParameters.ContainsKey("Python")) { $Python = [string]$Config.python }
-if (-not $PSBoundParameters.ContainsKey("KernelSUPackage")) { $KernelSUPackage = [string]$Config.kernelsu_package }
 
 function Invoke-MuMu {
     param([string[]]$MuMuArgs)
@@ -166,10 +164,6 @@ if (-not $port) {
 }
 $serial = "127.0.0.1:$port"
 Wait-AdbDevice -Serial $serial
-
-Write-Host "启动 KernelSU"
-& $Adb -s $serial shell monkey -p $KernelSUPackage -c android.intent.category.LAUNCHER 1 | Out-Null
-Start-Sleep -Seconds 3
 
 Write-Host "执行界面流程..."
 if ($env:PYTHONPATH) {

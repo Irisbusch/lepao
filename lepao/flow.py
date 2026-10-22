@@ -1,4 +1,4 @@
-"""KernelSU → LSPosed → 定位 → 乐跑 的点击顺序。"""
+"""先打开乐跑无障碍，再 KernelSU → LSPosed → 定位 → 乐跑。"""
 
 from __future__ import annotations
 
@@ -93,26 +93,39 @@ class Session:
             return
 
         self._stage(STAGES[0])
-        width, height = self._open_lsposed_shell()
+        width, height = self._prepare_window()
+        self._open_lepao_accessibility(width, height)
         self._stage(STAGES[1])
-        self._arm_spoofer(width, height)
+        width, height = self._open_lsposed_shell()
         self._stage(STAGES[2])
-        self._open_lepao(width, height)
+        self._arm_spoofer(width, height)
         self._stage(STAGES[3])
-        self._back_to_previous_app(width, height)
+        self._open_lepao(width, height)
         self._stage(STAGES[4])
-        self._Route_Simulation(width, height)
-        self._stage(STAGES[5])
         self._back_to_previous_app(width, height)
+        self._stage(STAGES[5])
+        self._Route_Simulation(width, height)
         self._stage(STAGES[6])
-        self._wait_until_km()
+        self._back_to_previous_app(width, height)
         self._stage(STAGES[7])
-        self._hold(width, height, Points.HOLD_TO_PAUSE, "长按暂停", HOLD_SEC)
+        self._wait_until_km()
         self._stage(STAGES[8])
+        self._hold(width, height, Points.HOLD_TO_PAUSE, "长按暂停", HOLD_SEC)
+        self._stage(STAGES[9])
         self._finish(width, height)
 
     def _stage(self, name: str) -> None:
         log.info("阶段 %s", name)
+
+    def _open_lepao_accessibility(self, width: int, height: int) -> None:
+        """打开乐跑无障碍功能"""
+        self._tap(width, height, Points.SETTING, "点击设置", 2.0)
+        self._scroll_to_bottom(width, height)
+        self._tap(width, height, Points.ACCESSIBILITY, "点击无障碍功能", 2.0)
+        self._tap(width, height, Points.LEPAO_ACCESSIBILITY, "点击乐跑无障碍", 2.0)
+        self._tap(width, height, Points.LEPAO_ACCESSIBILITY_1, "点击启用乐跑无障碍", 3.0)
+        self._tap(width, height, Points.ADMIT, "点击允许", 3.0)
+
 
     def _prepare_window(self) -> tuple[int, int]:
         hwnd, title = find_mumu_window()
