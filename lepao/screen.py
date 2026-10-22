@@ -42,32 +42,6 @@ class Screen:
     def __init__(self, device: Any) -> None:
         self.device = device
 
-    def module_nodes(self) -> list[dict[str, Any]]:
-        nodes: list[dict[str, Any]] = []
-        seen: set[tuple[Any, ...]] = set()
-        for selector in (self.device(text="模块"), self.device(description="模块")):
-            try:
-                count = selector.count
-            except Exception:
-                count = 0
-            for i in range(count):
-                try:
-                    info = selector[i].info
-                except Exception:
-                    continue
-                cx, cy, bottom = center_of(info)
-                key = (cx, cy, info.get("text"))
-                if key in seen:
-                    continue
-                seen.add(key)
-                nodes.append({
-                    "text": (info.get("text") or "").strip(),
-                    "cx": cx,
-                    "cy": cy,
-                    "bottom": bottom,
-                })
-        return nodes
-
     def visible_texts(self) -> list[str]:
         xml = self.device.dump_hierarchy()
         return [

@@ -10,9 +10,6 @@ import uiautomator2 as u2
 
 from lepao.config import (
     ARTIFACTS,
-    BOTTOM_TAB_FLOOR_RATIO,
-    BOTTOM_TAB_X_RATIO,
-    BOTTOM_TAB_Y_RATIO,
     DISTANCE_POLL_SEC,
     DISTANCE_TARGET_KM,
     DISTANCE_WAIT_SEC,
@@ -23,8 +20,6 @@ from lepao.config import (
     LSPOSED_LAUNCH_ATTEMPTS,
     MENU_DX,
     MENU_DY,
-    MODULE_ICON_ABOVE_LABEL,
-    MODULE_ICON_Y_RATIO,
     MODULE_TAB_ATTEMPTS,
     MULT_DX,
     MULT_DY,

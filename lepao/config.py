@@ -14,13 +14,6 @@ ARTIFACTS = REPO_ROOT / "artifacts"
 KERNELSU_PACKAGE = "me.weishu.kernelsu"
 WINDOW_HINTS = ("乐跑", "MuMu", "mumu", "模拟器")
 
-# 底栏四项：主页、超级用户、模块、设置。模块是第 3 项。
-BOTTOM_TAB_X_RATIO = 0.625
-BOTTOM_TAB_Y_RATIO = 0.935
-BOTTOM_TAB_FLOOR_RATIO = 0.82
-MODULE_ICON_Y_RATIO = 0.90
-MODULE_ICON_ABOVE_LABEL = 36
-
 # 首页中间那张「模块」卡片。底栏的「模块」在更下面，不计入。
 HOME_CARD_MIN_Y = 400
 HOME_CARD_MAX_Y_RATIO = 0.75
